@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  resumePublicId: {
+    type: String,
+    default: ''
+  },
   resumeOriginalName: {
     type: String,
     default: ''

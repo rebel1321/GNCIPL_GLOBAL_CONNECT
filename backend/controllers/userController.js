@@ -269,20 +269,20 @@ export const uploadResume = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Delete old resume file if exists
-    if (user.resume && user.resume.startsWith('/uploads/')) {
-      const fs = await import('fs');
-      const path = await import('path');
-      const oldFilePath = path.join(process.cwd(), user.resume);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
+    // Delete old resume from Cloudinary if a prior upload exists
+    if (user.resumePublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.resumePublicId, {
+          resource_type: 'raw',
+          invalidate: true
+        });
+      } catch (deleteError) {
+        console.warn('Could not delete old resume from Cloudinary:', deleteError);
       }
     }
-
-    // Create the file URL for frontend access (local path)
-    const resumeUrl = `/uploads/resumes/${req.file.filename}`;
     
-    user.resume = resumeUrl;
+    user.resume = req.file.path;
+    user.resumePublicId = req.file.filename;
     user.resumeOriginalName = req.file.originalname;
     user.resumeUploadedAt = new Date();
     await user.save();
@@ -308,17 +308,25 @@ export const deleteResume = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user || !user.resume) return res.status(404).json({ success: false, message: "No resume found" });
 
-    // Delete local file if it exists
-    if (user.resume.startsWith('/uploads/')) {
-      const fs = await import('fs');
-      const path = await import('path');
-      const filePath = path.join(process.cwd(), user.resume);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    // Delete resume from Cloudinary using saved public ID when available.
+    const derivedPublicId = !user.resumePublicId && user.resume
+      ? user.resume.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?(?:\?|$)/)?.[1]
+      : null;
+    const publicId = user.resumePublicId || derivedPublicId;
+
+    if (publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: 'raw',
+          invalidate: true
+        });
+      } catch (deleteError) {
+        console.warn('Could not delete resume from Cloudinary:', deleteError);
       }
     }
 
     user.resume = null;
+    user.resumePublicId = null;
     user.resumeOriginalName = null;
     user.resumeUploadedAt = null;
     await user.save();

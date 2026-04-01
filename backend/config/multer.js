@@ -1,7 +1,6 @@
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { v2 as cloudinary } from 'cloudinary';
-import fs from 'fs';
 
 // Configure cloudinary storage for images and videos
 const imageVideoStorage = new CloudinaryStorage({
@@ -13,21 +12,15 @@ const imageVideoStorage = new CloudinaryStorage({
   },
 });
 
-// Configure local storage for resume (PDF only)
-const resumeStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = './uploads/resumes';
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    // Create unique filename: userId_timestamp_originalname
-    const uniqueName = `${req.user.id}_${Date.now()}_${file.originalname}`;
-    cb(null, uniqueName);
-  }
+// Configure Cloudinary storage for resume (PDF only)
+const resumeStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req) => ({
+    folder: 'global-connect/resumes',
+    resource_type: 'raw',
+    format: 'pdf',
+    public_id: `resume_${req.user.id}_${Date.now()}`
+  })
 });
 
 // File filter function for images and videos only
