@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-
 // Model imports (to ensure they're loaded)
 import './models/User.js';
 import './models/Recruiter.js';
