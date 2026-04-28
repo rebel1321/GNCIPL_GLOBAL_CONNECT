@@ -47,9 +47,17 @@ jobs:
 
       # 🏗 Build image
       - name: Build Docker image
+        if: github.event_name == 'push'
         working-directory: backend
         run: docker build -t rebel13/global-connect:latest .
 
       # 🚀 Push image
       - name: Push Docker image
+        if: github.event_name == 'push'
         run: docker push rebel13/global-connect:latest
+
+      - name: Trigger Render Deploy
+        if: github.event_name == 'push'
+        run: curl -f "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
